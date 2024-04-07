@@ -44,7 +44,6 @@ func dirTree(out io.Writer, path string, printFiles bool) error {
 		prfile:   printFiles,
 	}
 
-	// dirArr := make([]fs.DirEntry, 0)
 	tree(path, &config)
 
 	return nil
@@ -67,30 +66,24 @@ func tree(path string, config *Config) {
 	for indx, i := range dirArr {
 		if i.IsDir() {
 			config.levelDir++
-			printTree(&dirArr, config, i, indx)
+			printTree(&dirArr, config, i, indx, 0)
 			tree(path+"/"+dirArr[indx].Name(), config)
 		} else {
-			printTree(&dirArr, config, i, indx)
+			printTree(&dirArr, config, i, indx, 1)
 		}
 	}
 	config.levelDir--
 }
 
-func printTree(dirArr *[]fs.DirEntry, config *Config, i fs.DirEntry, indx int) {
-	if i.IsDir() {
-		if indx < len(*dirArr)-1 {
-			fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir), config.tabDir, i.Name())
+func printTree(dirArr *[]fs.DirEntry, config *Config, i fs.DirEntry, indx int, shift int) {
+	sep := "├───"
 
-		} else {
-			fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir), config.tabFile, i.Name())
-		}
-
-	} else {
-		if indx < len(*dirArr)-1 {
-			fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir+1), config.tabDir, i.Name())
-
-		} else {
-			fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir+1), config.tabFile, i.Name())
-		}
+	if indx == len(*dirArr)-1 {
+		sep = "└───"
 	}
+	if config.levelDir+shift > 0 {
+		fmt.Printf("|")
+	}
+	fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir+shift), sep, i.Name())
+
 }
