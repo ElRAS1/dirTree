@@ -37,19 +37,14 @@ func main() {
 func dirTree(out io.Writer, path string, printFiles bool) error {
 
 	config := Config{
-		// tabFile:  "\t├───",
 		tabDir:   "├───",
 		levelDir: 0,
-		// levelFile: 1,
-		prfile: printFiles,
+		prfile:   printFiles,
 	}
 
 	dirArr := make([]string, 0)
 	dirFile := make([]string, 0)
 	tree(path, &config, &dirArr, &dirFile)
-
-	// fmt.Println(dirArr)
-	// fmt.Println(dirFile)
 	return nil
 }
 
@@ -59,7 +54,6 @@ func tree(path string, config *Config, dirArr *[]string, dirFile *[]string) {
 	if err != nil {
 		return
 	}
-
 	for _, i := range entries {
 		if i.IsDir() {
 			*dirArr = append(*dirArr, i.Name())
@@ -69,15 +63,23 @@ func tree(path string, config *Config, dirArr *[]string, dirFile *[]string) {
 			tree(path+"/"+i.Name(), config, dirArr, dirFile)
 
 		} else if config.prfile {
-			*dirFile = append(*dirFile, i.Name())
+			st, err := os.Stat(path + "/" + i.Name())
+			if err != nil {
+				return
+			}
+			size := st.Size()
+			if size > 0 {
+				*dirFile = append(*dirFile, i.Name()+fmt.Sprintf(" (%db)", size))
+			} else {
+				*dirFile = append(*dirFile, i.Name()+" (empty)")
+			}
 			printFile(dirFile, config)
 			*dirFile = make([]string, 0)
-
 		}
 
 	}
 
-	config.levelDir = 0
+	config.levelDir--
 
 }
 
@@ -86,7 +88,8 @@ func printDir(dirArr *[]string, config *Config) {
 
 	for indx, i := range *dirArr {
 		if indx == len(*dirArr)-1 && config.levelDir > 0 {
-			fmt.Printf("%s└───%s\n", strings.Repeat("    ", config.levelDir), i)
+			fmt.Printf("|%s└───%s\n", strings.Repeat("    ", config.levelDir), i)
+	
 		} else {
 			fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir), config.tabDir, i)
 		}
@@ -97,7 +100,7 @@ func printFile(dirFile *[]string, config *Config) {
 
 	for indx, i := range *dirFile {
 		if indx == len(*dirFile)-1 {
-			fmt.Printf("%s└───%s\n", strings.Repeat("    ", config.levelDir), i)
+			fmt.Printf("|%s└───%s\n", strings.Repeat("    ", config.levelDir), i)
 		} else {
 			fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir), config.tabDir, i)
 		}
