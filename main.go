@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"strings"
 	// "path/filepath"
@@ -38,72 +39,58 @@ func dirTree(out io.Writer, path string, printFiles bool) error {
 
 	config := Config{
 		tabDir:   "├───",
-		levelDir: 0,
+		tabFile:  "└───",
+		levelDir: -1,
 		prfile:   printFiles,
 	}
 
-	dirArr := make([]string, 0)
-	dirFile := make([]string, 0)
-	tree(path, &config, &dirArr, &dirFile)
+	// dirArr := make([]fs.DirEntry, 0)
+	tree(path, &config)
+
 	return nil
 }
 
-func tree(path string, config *Config, dirArr *[]string, dirFile *[]string) {
+func tree(path string, config *Config) {
 
 	entries, err := os.ReadDir(path)
+	dirArr := make([]fs.DirEntry, 0)
+
 	if err != nil {
 		return
 	}
 	for _, i := range entries {
+		if !i.IsDir() && !config.prfile {
+			continue
+		}
+		dirArr = append(dirArr, i)
+	}
+	for indx, i := range dirArr {
 		if i.IsDir() {
-			*dirArr = append(*dirArr, i.Name())
-			printDir(dirArr, config)
 			config.levelDir++
-			*dirArr = make([]string, 0)
-			tree(path+"/"+i.Name(), config, dirArr, dirFile)
-
-		} else if config.prfile {
-			st, err := os.Stat(path + "/" + i.Name())
-			if err != nil {
-				return
-			}
-			size := st.Size()
-			if size > 0 {
-				*dirFile = append(*dirFile, i.Name()+fmt.Sprintf(" (%db)", size))
-			} else {
-				*dirFile = append(*dirFile, i.Name()+" (empty)")
-			}
-			printFile(dirFile, config)
-			*dirFile = make([]string, 0)
+			printTree(&dirArr, config, i, indx)
+			tree(path+"/"+dirArr[indx].Name(), config)
+		} else {
+			printTree(&dirArr, config, i, indx)
 		}
-
 	}
-
 	config.levelDir--
-
 }
 
-// сделать одну функцию которая будет принимать разделитель
-func printDir(dirArr *[]string, config *Config) {
+func printTree(dirArr *[]fs.DirEntry, config *Config, i fs.DirEntry, indx int) {
+	if i.IsDir() {
+		if indx < len(*dirArr)-1 {
+			fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir), config.tabDir, i.Name())
 
-	for indx, i := range *dirArr {
-		if indx == len(*dirArr)-1 && config.levelDir > 0 {
-			fmt.Printf("|%s└───%s\n", strings.Repeat("    ", config.levelDir), i)
-	
 		} else {
-			fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir), config.tabDir, i)
+			fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir), config.tabFile, i.Name())
+		}
+
+	} else {
+		if indx < len(*dirArr)-1 {
+			fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir+1), config.tabDir, i.Name())
+
+		} else {
+			fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir+1), config.tabFile, i.Name())
 		}
 	}
-}
-
-func printFile(dirFile *[]string, config *Config) {
-
-	for indx, i := range *dirFile {
-		if indx == len(*dirFile)-1 {
-			fmt.Printf("|%s└───%s\n", strings.Repeat("    ", config.levelDir), i)
-		} else {
-			fmt.Printf("%s%s%s\n", strings.Repeat("    ", config.levelDir), config.tabDir, i)
-		}
-	}
-
 }
